@@ -2,15 +2,17 @@ from BrickPi import *
 from time import sleep, time
 from math import pi, floor
 
-leftMotor   = PORT_A
-rightMotor  = PORT_B
-leftBumper  = PORT_C
-rightBumper = PORT_D
+leftMotor   = PORT_B
+rightMotor  = PORT_A
+leftBumper  = PORT_4
+rightBumper = PORT_3
 
 
 wheelRadius = 2.9#cm
 
 def initialiseDiffDriveRobot():
+    global leftMotor
+    global rightMotor
     BrickPiSetup()
     BrickPi.MotorEnable[leftMotor] = 1 # set up Motors
     BrickPi.MotorEnable[rightMotor] = 1
@@ -21,9 +23,13 @@ def initialiseDiffDriveRobot():
     BrickPiSetTimeout()
 
 def leftCrash():
+    global leftBumper
+    BrickPiUpdateValues()
     return BrickPi.Sensor[leftBumper] == 1
 
 def rightCrash():
+    global rightBumper
+    BrickPiUpdateValues()
     return BrickPi.Sensor[rightBumper] == 1
 
 def goForwardsForDistance(targetDistance):
@@ -37,7 +43,7 @@ def goForwardsForDistance(targetDistance):
     leftMotorPower = 0
     rightMotorPower = 0
     distanceMoved = 0
-    desiredSpeed = 40 # Simply accelerate to limiting speed for now, add more speed control later
+    desiredSpeed = -40 # Simply accelerate to limiting speed for now, add more speed control later
 
     # Main control loop
     while(distanceMoved < targetDistance):
@@ -85,11 +91,11 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     leftMotorPower = 0
     rightMotorPower = 0
     if(clockwise):
-        leftDesiredSpeed = 20
-        rightDesiredSpeed = -20
-    else:
         leftDesiredSpeed = -20
         rightDesiredSpeed = 20
+    else:
+        leftDesiredSpeed = 20
+        rightDesiredSpeed = -20
 
     arrived = False
     print "Distance to travel=", wheelSeparation * pi* angle/360
@@ -165,6 +171,7 @@ def crashTest():
     while(True):
         l = leftCrash()
         r = rightCrash()
+
         if l and r:
             print "Both"
         if l and not r:
