@@ -53,7 +53,9 @@ def goForwardsWhileAvoiding():
 
     while(True):
         # set motor speed
-        accelerateToSpeed(-30)
+        # accelerateToSpeed(50) # too unresponsive
+        setLeftMotor(150)
+        setRightMotor(150)
         BrickPiUpdateValues()
         if leftCrash():
             stop()
@@ -63,15 +65,15 @@ def goForwardsWhileAvoiding():
             avoidLeft()
 
 def avoidRight():
-    goDistance(10)
+    goDistance(-10)
     rotate(90)
-    goDistance(-50)
+    goDistance(30)
     rotate(90, clockwise=False)
     
 def avoidLeft():
-    goDistance(10)
+    goDistance(-10)
     rotate(90, clockwise=False)
-    goDistance(-50)
+    goDistance(30)
     rotate(90)
 
 def readSonar():
@@ -176,11 +178,11 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     leftMotorPower = 0
     rightMotorPower = 0
     if(clockwise):
-        leftDesiredSpeed = -20
-        rightDesiredSpeed = 20
-    else:
         leftDesiredSpeed = 20
         rightDesiredSpeed = -20
+    else:
+        leftDesiredSpeed = -20
+        rightDesiredSpeed = 20
 
     arrived = False
     print "Distance to travel=", wheelSeparation * pi* angle/360
