@@ -32,6 +32,22 @@ def rightCrash():
     BrickPiUpdateValues()
     return BrickPi.Sensor[rightBumper] == 1
 
+def goForwardsWhileAvoiding():
+    global leftMotor
+    global rightMotor
+    while(True):
+        # set motor speed
+        BrickPi.MotorSpeed[leftMotor] = 100
+        BrickPi.MotorSpeed[rightMotor] = 100
+        BrickPiUpdateValues()
+        if leftCrash():
+            # move out the way
+            pass
+        if rightCrash():
+            # move out the way
+            pass
+        
+
 def goForwardsForDistance(targetDistance):
 
     # Initialisation
