@@ -4,10 +4,10 @@ from BrickPi import *
 from time import sleep, time
 from math import pi, floor
 
-leftMotor   = PORT_B
-rightMotor  = PORT_A
-leftBumper  = PORT_4
-rightBumper = PORT_3
+leftMotor   = PORT_C
+rightMotor  = PORT_B
+leftBumper  = PORT_2
+rightBumper = PORT_1
 
 
 wheelRadius = 2.9#cm
@@ -40,8 +40,8 @@ def goForwardsWhileAvoiding():
 
     while(True):
         # set motor speed
-        BrickPi.MotorSpeed[leftMotor] = 100
-        BrickPi.MotorSpeed[rightMotor] = 100
+        BrickPi.MotorSpeed[leftMotor] = 50
+        BrickPi.MotorSpeed[rightMotor] = 50
         BrickPiUpdateValues()
         if leftCrash():
             avoidRight()
@@ -71,24 +71,33 @@ def goForwardsForDistance(targetDistance):
 
     # Main control loop
     while(distanceMoved < targetDistance):
-        # Send values to BrickPi
-        BrickPi.MotorSpeed[leftMotor] = leftMotorPower
-        BrickPi.MotorSpeed[rightMotor] = rightMotorPower
-        BrickPiUpdateValues()
-
-        # Calculate error signal
-        leftVelocity = getVelocity(leftMotor)
-        rightVelocity = getVelocity(rightMotor)
-        leftError = leftVelocity - desiredSpeed
-        rightError = rightVelocity - desiredSpeed
-
-        # Apply feedback
-        proportionalFactor=1
-        leftMotorPower -= int(proportionalFactor * leftError)
-        rightMotorPower -= int(proportionalFactor * rightError)
+        accelerateToSpeed(desiredSpeed)
         distanceMoved = wheelRadius*(getMotorAngle(leftMotor) - startAngle)*pi/360
     stop()
     print "Distance Moved =", distanceMoved
+
+def accelerateToSpeed(desiredSpeed):
+    global leftMotor
+    global rightMotor
+    leftError = getVelocity(leftMotor) - desiredSpeed
+    rightError = getVelocity(rightMotor) - desiredSpeed
+    
+    while(abs(leftError)>abs(desiredSpeed/6.0) and abs(rightError)>abs(desiredSpeed/6.0)):
+        # Calculate error signal
+        leftError = getVelocity(leftMotor) - desiredSpeed
+        rightError = getVelocity(rightMotor) - desiredSpeed
+        print "Error = ", leftError, rightError
+
+        # Apply feedback
+        proportionalFactor=1
+        leftMotorPower = int(proportionalFactor * leftError)
+        rightMotorPower = int(proportionalFactor * rightError)
+        BrickPi.MotorSpeed[leftMotor] -= leftMotorPower
+        BrickPi.MotorSpeed[rightMotor] -= rightMotorPower
+        print "New motor powers = ", leftMotorPower, rightMotorPower
+        BrickPiUpdateValues()    
+
+        sleep(0.1)
 
 def rotate(angle, clockwise=True): # angle to rotate in degrees
     # Initialise target values

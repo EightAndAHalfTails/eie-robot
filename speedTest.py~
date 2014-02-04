@@ -1,0 +1,8 @@
+from robot import *
+
+initialiseDiffDriveRobot()
+while(True):
+    accelerateToSpeed(20)
+    sleep(3)
+    accelerateToSpeed(-20)
+    sleep(3)
