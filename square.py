@@ -3,11 +3,11 @@ from robot import *
 
 initialiseDiffDriveRobot()
 #while(True):
-goForwardsForDistance(40)
+goDistance(40)
 rotate(90)
-goForwardsForDistance(40)
+goDistance(40)
 rotate(90)
-goForwardsForDistance(40)
+goDistance(40)
 rotate(90)
-goForwardsForDistance(40)
+goDistance(40)
 rotate(90)

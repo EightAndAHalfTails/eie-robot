@@ -21,7 +21,7 @@ def initialiseDiffDriveRobot():
     BrickPi.SensorType[leftBumper] = TYPE_SENSOR_TOUCH # set up touch sensors
     BrickPi.SensorType[rightBumper] = TYPE_SENSOR_TOUCH
     BrickPiSetupSensors()
-    BrickPi.Timeout = 10000 # stop motors after 10 seconds
+    BrickPi.Timeout = 5000 # stop motors after 10 seconds
     BrickPiSetTimeout()
 
 def leftCrash():
@@ -52,29 +52,37 @@ def avoidRight():
     goForwardsForDistance(-10)
 
 def avoidLeft():
-    goForwardsForDistance(-10)
+    goForwardsForDistance(-10)        
 
-        
+def goDistance(targetDistance, desiredSpeed=40):
+    if desiredSpeed < 0:
+        raise ValueError
 
-def goForwardsForDistance(targetDistance):
+    forwards = (targetDistance > 0)
 
     # Initialisation
     global leftMotor
     global rightMotor
     global wheelRadius
     startTime = time()
-    startAngle = getMotorAngle(leftMotor)
-    leftMotorPower = 0
-    rightMotorPower = 0
-    distanceMoved = 0
-    desiredSpeed = -40 # Simply accelerate to limiting speed for now, add more speed control later
-
+    startAngleLeft = getMotorAngle(leftMotor)
+    startAngleRight = getMotorAngle(rightMotor)
+    distanceMovedLeft = 0
+    distanceMovedRight = 0
+    
     # Main control loop
-    while(distanceMoved < targetDistance):
-        accelerateToSpeed(desiredSpeed)
-        distanceMoved = wheelRadius*(getMotorAngle(leftMotor) - startAngle)*pi/360
+    if forwards:
+        while(distanceMovedLeft < targetDistance or distanceMovedRight < targetDistance):
+            accelerateToSpeed(desiredSpeed)
+            distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)*pi/360
+            distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)*pi/360
+    else:
+        while(distanceMovedLeft > targetDistance or distanceMovedRight > targetDistance):
+            accelerateToSpeed(-desiredSpeed)
+            distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)*pi/360
+            distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)*pi/360
     stop()
-    print "Distance Moved =", distanceMoved
+    print "Distance Moved =", distanceMovedLeft, distanceMovedRight
 
 def accelerateToSpeed(desiredSpeed):
     global leftMotor
@@ -86,7 +94,6 @@ def accelerateToSpeed(desiredSpeed):
         # Calculate error signal
         leftError = getVelocity(leftMotor) - desiredSpeed
         rightError = getVelocity(rightMotor) - desiredSpeed
-        print "Error = ", leftError, rightError
 
         # Apply feedback
         proportionalFactor=1
@@ -94,7 +101,6 @@ def accelerateToSpeed(desiredSpeed):
         rightMotorPower = int(proportionalFactor * rightError)
         BrickPi.MotorSpeed[leftMotor] -= leftMotorPower
         BrickPi.MotorSpeed[rightMotor] -= rightMotorPower
-        print "New motor powers = ", leftMotorPower, rightMotorPower
         BrickPiUpdateValues()    
 
         sleep(0.1)

@@ -2,7 +2,7 @@ from robot import *
 
 initialiseDiffDriveRobot()
 while(True):
-    accelerateToSpeed(50)
+    goDistance(50, desiredSpeed=50)
     sleep(2)
-    accelerateToSpeed(-50)
+    goDistance(-50)
     sleep(2)
