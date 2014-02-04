@@ -3,7 +3,9 @@
 from BrickPi import *
 from time import sleep, time
 from math import pi, floor
+import sys
 
+sonar       = PORT_3
 leftMotor   = PORT_C
 rightMotor  = PORT_B
 leftBumper  = PORT_2
@@ -20,9 +22,20 @@ def initialiseDiffDriveRobot():
     BrickPi.MotorEnable[rightMotor] = 1
     BrickPi.SensorType[leftBumper] = TYPE_SENSOR_TOUCH # set up touch sensors
     BrickPi.SensorType[rightBumper] = TYPE_SENSOR_TOUCH
+    BrickPi.SensorType[sonar] = TYPE_SENSOR_ULTRASONIC_CONT # set up sonar
     BrickPiSetupSensors()
     BrickPi.Timeout = 5000 # stop motors after 10 seconds
     BrickPiSetTimeout()
+
+def setLeftMotor(power):
+    global leftMotor
+    BrickPi.MotorSpeed[leftMotor] = power
+    BrickPiUpdateValues()
+
+def setRightMotor(power):
+    global rightMotor
+    BrickPi.MotorSpeed[rightMotor] = power
+    BrickPiUpdateValues()
 
 def leftCrash():
     global leftBumper
@@ -61,6 +74,22 @@ def avoidLeft():
     goDistance(-50)
     rotate(90)
 
+def readSonar():
+    global sonar
+    BrickPiUpdateValues()
+    return BrickPi.Sensor[sonar]
+
+def keepDistance(dist):
+    sonarMountedOnFront = False
+    while(True):
+        error = dist - readSonar()
+        gain = 10
+        gain = -gain if sonarMountedOnFront else gain
+        speed = gain * error
+        print "Distance =", error
+#        accelerateToSpeed(speed) # too unresponsive
+        setLeftMotor(speed)
+        setRightMotor(speed)
 def goDistance(targetDistance, desiredSpeed=40):
     if desiredSpeed < 0:
         raise ValueError
@@ -92,15 +121,25 @@ def goDistance(targetDistance, desiredSpeed=40):
     print "Distance Moved =", distanceMovedLeft, distanceMovedRight
 
 def accelerateToSpeed(desiredSpeed):
+    upperLimit = 80
+    lowerLimit = 5
+    if abs(desiredSpeed) < lowerLimit or abs(desiredSpeed) > upperLimit:
+        return
+
     global leftMotor
     global rightMotor
     leftError = getVelocity(leftMotor) - desiredSpeed
     rightError = getVelocity(rightMotor) - desiredSpeed
+
+    closeEnough =max(abs(desiredSpeed/6), 1.0)
     
-    while(abs(leftError)>abs(desiredSpeed/6.0) and abs(rightError)>abs(desiredSpeed/6.0)):
+#    while(abs(leftError)>abs(desiredSpeed/6.0) and abs(rightError)>abs(desiredSpeed/6.0)):
+    while(abs(leftError)>closeEnough or abs(rightError)>closeEnough):
         # Calculate error signal
         leftError = getVelocity(leftMotor) - desiredSpeed
         rightError = getVelocity(rightMotor) - desiredSpeed
+        print "Error =", leftError, rightError, "\r",
+        sys.stdout.flush()
 
         # Apply feedback
         proportionalFactor=1
