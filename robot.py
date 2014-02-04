@@ -40,19 +40,26 @@ def goForwardsWhileAvoiding():
 
     while(True):
         # set motor speed
-        BrickPi.MotorSpeed[leftMotor] = 50
-        BrickPi.MotorSpeed[rightMotor] = 50
+        accelerateToSpeed(-30)
         BrickPiUpdateValues()
         if leftCrash():
+            stop()
             avoidRight()
         if rightCrash():
-            avoidLeft
+            stop()
+            avoidLeft()
 
 def avoidRight():
-    goForwardsForDistance(-10)
-
+    goDistance(10)
+    rotate(90)
+    goDistance(-50)
+    rotate(90, clockwise=False)
+    
 def avoidLeft():
-    goForwardsForDistance(-10)        
+    goDistance(10)
+    rotate(90, clockwise=False)
+    goDistance(-50)
+    rotate(90)
 
 def goDistance(targetDistance, desiredSpeed=40):
     if desiredSpeed < 0:
