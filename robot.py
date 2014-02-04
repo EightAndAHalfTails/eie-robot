@@ -37,17 +37,23 @@ def rightCrash():
 def goForwardsWhileAvoiding():
     global leftMotor
     global rightMotor
+
     while(True):
         # set motor speed
         BrickPi.MotorSpeed[leftMotor] = 100
         BrickPi.MotorSpeed[rightMotor] = 100
         BrickPiUpdateValues()
         if leftCrash():
-            # move out the way
-            pass
+            avoidRight()
         if rightCrash():
-            # move out the way
-            pass
+            avoidLeft
+
+def avoidRight():
+    goForwardsForDistance(-10)
+
+def avoidLeft():
+    goForwardsForDistance(-10)
+
         
 
 def goForwardsForDistance(targetDistance):
