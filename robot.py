@@ -2,27 +2,38 @@ from BrickPi import *
 from time import sleep, time
 from math import pi, floor
 
-left = PORT_A
-right= PORT_B
+leftMotor   = PORT_A
+rightMotor  = PORT_B
+leftBumper  = PORT_C
+rightBumper = PORT_D
+
 
 wheelRadius = 2.9#cm
 
 def initialiseDiffDriveRobot():
     BrickPiSetup()
-    BrickPi.MotorEnable[left] = 1
-    BrickPi.MotorEnable[right] = 1
+    BrickPi.MotorEnable[leftMotor] = 1 # set up Motors
+    BrickPi.MotorEnable[rightMotor] = 1
+    BrickPi.SensorType[leftBumper] = TYPE_SENSOR_TOUCH # set up touch sensors
+    BrickPi.SensorType[rightBumper] = TYPE_SENSOR_TOUCH
     BrickPiSetupSensors()
     BrickPi.Timeout = 10000 # stop motors after 10 seconds
     BrickPiSetTimeout()
 
+def leftCrash():
+    return BrickPi.Sensor[leftBumper] == 1
+
+def rightCrash():
+    return BrickPi.Sensor[rightBumper] == 1
+
 def goForwardsForDistance(targetDistance):
 
     # Initialisation
-    global left
-    global right
+    global leftMotor
+    global rightMotor
     global wheelRadius
     startTime = time()
-    startAngle = getMotorAngle(left)
+    startAngle = getMotorAngle(leftMotor)
     leftMotorPower = 0
     rightMotorPower = 0
     distanceMoved = 0
@@ -31,15 +42,13 @@ def goForwardsForDistance(targetDistance):
     # Main control loop
     while(distanceMoved < targetDistance):
         # Send values to BrickPi
-        BrickPi.MotorSpeed[left] = leftMotorPower
-        BrickPi.MotorSpeed[right] = rightMotorPower
+        BrickPi.MotorSpeed[leftMotor] = leftMotorPower
+        BrickPi.MotorSpeed[rightMotor] = rightMotorPower
         BrickPiUpdateValues()
 
         # Calculate error signal
-#        vel = (getVelocity(left)+getVelocity(right))/2
-        leftVelocity = getVelocity(left)
-        rightVelocity = getVelocity(right)
-#        error = vel - desiredSpeed
+        leftVelocity = getVelocity(leftMotor)
+        rightVelocity = getVelocity(rightMotor)
         leftError = leftVelocity - desiredSpeed
         rightError = rightVelocity - desiredSpeed
 
@@ -47,14 +56,14 @@ def goForwardsForDistance(targetDistance):
         proportionalFactor=1
         leftMotorPower -= int(proportionalFactor * leftError)
         rightMotorPower -= int(proportionalFactor * rightError)
-        distanceMoved = wheelRadius*(getMotorAngle(left) - startAngle)*pi/360
+        distanceMoved = wheelRadius*(getMotorAngle(leftMotor) - startAngle)*pi/360
     stop()
     print "Distance Moved =", distanceMoved
 
 def rotate(angle, clockwise=True): # angle to rotate in degrees
     # Initialise target values
-    global left
-    global right
+    global leftMotor
+    global rightMotor
     global wheelRadius
 #    wheelRadius = 2.9
     wheelDiameter = 2 * wheelRadius
@@ -66,11 +75,11 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     targetWheelAngleChange = 2 * angle * wheelSeparation/wheelDiameter
 
     if(clockwise):
-        leftTargetAngle = getMotorAngle(left) + int(targetWheelAngleChange)
-        rightTargetAngle = getMotorAngle(right) - int(targetWheelAngleChange)
+        leftTargetAngle = getMotorAngle(leftMotor) + int(targetWheelAngleChange)
+        rightTargetAngle = getMotorAngle(rightMotor) - int(targetWheelAngleChange)
     else:
-        leftTargetAngle = getMotorAngle(left) - int(targetWheelAngleChange)
-        rightTargetAngle = getMotorAngle(right) + int(targetWheelAngleChange)
+        leftTargetAngle = getMotorAngle(leftMotor) - int(targetWheelAngleChange)
+        rightTargetAngle = getMotorAngle(rightMotor) + int(targetWheelAngleChange)
         
     # Initialise Control Loop
     leftMotorPower = 0
@@ -87,12 +96,12 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     
     # main control loop
     while(not arrived):
-        BrickPi.MotorSpeed[left] = leftMotorPower
-        BrickPi.MotorSpeed[right] = rightMotorPower
+        BrickPi.MotorSpeed[leftMotor] = leftMotorPower
+        BrickPi.MotorSpeed[rightMotor] = rightMotorPower
         BrickPiUpdateValues()
         
-        leftWheelVelocity = getVelocity(left)
-        rightWheelVelocity = getVelocity(right)
+        leftWheelVelocity = getVelocity(leftMotor)
+        rightWheelVelocity = getVelocity(rightMotor)
 #        print "Wheel Velocity=", leftWheelVelocity, rightWheelVelocity
 
         leftError = leftWheelVelocity - leftDesiredSpeed
@@ -104,8 +113,8 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
         rightMotorPower -= int(proportionalFactor * rightError)
 #        print "Motor Power=", leftMotorPower, rightMotorPower
 
-        leftAngleError = getMotorAngle(left) - leftTargetAngle
-        rightAngleError = getMotorAngle(right) - rightTargetAngle
+        leftAngleError = getMotorAngle(leftMotor) - leftTargetAngle
+        rightAngleError = getMotorAngle(rightMotor) - rightTargetAngle
 #        print leftAngleError, rightAngleError
         if(clockwise):
             arrived = leftAngleError > 0 or rightAngleError < 0
@@ -118,10 +127,10 @@ def motorAngleToRadians(motorAngle):
     return pi*motorAngle/360
 
 def stop():
-    global left
-    global right
-    BrickPi.MotorSpeed[left] = 0
-    BrickPi.MotorSpeed[right] = 0
+    global leftMotor
+    global rightMotor
+    BrickPi.MotorSpeed[leftMotor] = 0
+    BrickPi.MotorSpeed[rightMotor] = 0
     BrickPiUpdateValues()
 
 def getMotorAngle(motor): # returns motor angle in semidegrees
@@ -142,11 +151,27 @@ def getVelocity(motor):
     return angularVelocity * wheelRadius
     
 def speedTest(speed):
-    global left
-    global right
-    BrickPi.MotorSpeed[left] = speed;
-    BrickPi.MotorSpeed[right] = speed;
+    global leftMotor
+    global rightMotor
+    BrickPi.MotorSpeed[leftMotor] = speed;
+    BrickPi.MotorSpeed[rightMotor] = speed;
     while(True):
-        print "rps = ", getMotorAngularVelocity(left)/(2*pi)
-        print "velocity = ", getVelocity(left)
+        print "rps = ", getMotorAngularVelocity(leftMotor)/(2*pi)
+        print "velocity = ", getVelocity(leftMotor)
     
+def crashTest():
+    global leftBumper
+    global rightBumper
+    while(True):
+        l = leftCrash()
+        r = rightCrash()
+        if l and r:
+            print "Both"
+        if l and not r:
+            print "Left"
+        if not l and r:
+            print "Right"
+        if not l and not r:
+            print "Neither"
+            
+        
