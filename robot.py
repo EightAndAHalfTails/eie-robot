@@ -93,6 +93,16 @@ def keepDistance(desiredDistance):
 #        accelerateToSpeed(speed) # too unresponsive
         setLeftMotor(speed)
         setRightMotor(speed)
+
+def followRightWall(desiredDistance=30, desiredSpeed = 100):
+    while(True):
+        dist = readSonar()
+        error = desiredDistance - dist
+        gain = 1.0
+
+        setLeftMotor(desiredSpeed - gain*error)
+        setRightMotor(desiredSpeed + gain*error)
+
 def goDistance(targetDistance, desiredSpeed=40):
     if desiredSpeed < 0:
         raise ValueError
