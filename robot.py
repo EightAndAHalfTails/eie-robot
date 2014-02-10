@@ -5,7 +5,7 @@ from time import sleep, time
 from math import pi, floor
 import sys
 
-sonar       = PORT_3
+sonar       = PORT_4
 leftMotor   = PORT_C
 rightMotor  = PORT_B
 leftBumper  = PORT_1
@@ -81,14 +81,15 @@ def readSonar():
     BrickPiUpdateValues()
     return BrickPi.Sensor[sonar]
 
-def keepDistance(dist):
+def keepDistance(desiredDistance):
     sonarMountedOnFront = False
     while(True):
-        error = dist - readSonar()
-        gain = 10
-        gain = -gain if sonarMountedOnFront else gain
+        distance = readSonar()
+        error = desiredDistance - distance
+        gain = -10
+        gain = gain if sonarMountedOnFront else -gain
         speed = gain * error
-        print "Distance =", error
+        print "Distance = {} - {} = {} Set speed to{}".format(desiredDistance, distance, error, speed)
 #        accelerateToSpeed(speed) # too unresponsive
         setLeftMotor(speed)
         setRightMotor(speed)
