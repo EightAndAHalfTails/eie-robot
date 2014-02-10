@@ -8,8 +8,8 @@ import sys
 sonar       = PORT_3
 leftMotor   = PORT_C
 rightMotor  = PORT_B
-leftBumper  = PORT_2
-rightBumper = PORT_1
+leftBumper  = PORT_1
+rightBumper = PORT_2
 
 
 wheelRadius = 2.9#cm
