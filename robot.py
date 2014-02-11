@@ -12,7 +12,8 @@ leftBumper  = PORT_1
 rightBumper = PORT_2
 
 
-wheelRadius = 2.9#cm
+wheelRadius = 2.0#cm
+wheelSeparation = 16.0#cm
 
 def initialiseDiffDriveRobot():
     global leftMotor
@@ -29,12 +30,12 @@ def initialiseDiffDriveRobot():
 
 def setLeftMotor(power):
     global leftMotor
-    BrickPi.MotorSpeed[leftMotor] = power
+    BrickPi.MotorSpeed[leftMotor] = int(power)
     BrickPiUpdateValues()
 
 def setRightMotor(power):
     global rightMotor
-    BrickPi.MotorSpeed[rightMotor] = power
+    BrickPi.MotorSpeed[rightMotor] = int(power)
     BrickPiUpdateValues()
 
 def leftCrash():
@@ -89,19 +90,32 @@ def keepDistance(desiredDistance):
         gain = -10
         gain = gain if sonarMountedOnFront else -gain
         speed = gain * error
-        print "Distance = {} - {} = {} Set speed to{}".format(desiredDistance, distance, error, speed)
+        print "Distance = {} - {} = {} Set speed to {}".format(desiredDistance, distance, error, speed)
 #        accelerateToSpeed(speed) # too unresponsive
         setLeftMotor(speed)
         setRightMotor(speed)
 
-def followRightWall(desiredDistance=30, desiredSpeed = 100):
+def followRightWall(desiredDistance=30, desiredSpeed=150):
     while(True):
         dist = readSonar()
         error = desiredDistance - dist
-        gain = 1.0
+#        gain = 2.0
+        gain = 10.0
 
-        setLeftMotor(desiredSpeed - gain*error)
-        setRightMotor(desiredSpeed + gain*error)
+        dv = gain*error
+
+        if dv > 255 - desiredSpeed:
+            dv = 255 - desiredSpeed
+
+        if dv < -255 + desiredSpeed:
+            dv = -255 + desiredSpeed
+
+        setLeftMotor(desiredSpeed - dv)
+        setRightMotor(desiredSpeed + dv)
+
+        print "Distance = {}. Turning {}".format(error, "left" if error>0 else "right")
+        print "Speeds = ({}, {})".format(desiredSpeed-dv, desiredSpeed+dv)
+        print "==================================="
 
 def goDistance(targetDistance, desiredSpeed=40):
     if desiredSpeed < 0:
@@ -118,6 +132,9 @@ def goDistance(targetDistance, desiredSpeed=40):
     startAngleRight = getMotorAngle(rightMotor)
     distanceMovedLeft = 0
     distanceMovedRight = 0
+
+    fudgeFactor = 1.2
+    targetDistance *= fudgeFactor
     
     # Main control loop
     if forwards:
@@ -169,14 +186,17 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     global leftMotor
     global rightMotor
     global wheelRadius
+    global wheelSeparation
 #    wheelRadius = 2.9
     wheelDiameter = 2 * wheelRadius
 #    wheelCircumference = 2*pi*wheelRadius
-    wheelSeparation = 13.7
 #    targetDistance = angle*wheelSeparation/2
 #    targetWheelRotations = targetDistance/wheelCircumference
 #    targetWheelAngleChange = targetWheelRotations * 720
     targetWheelAngleChange = 2 * angle * wheelSeparation/wheelDiameter
+
+    fudgeFactor = 1.4
+    targetWheelAngleChange *= fudgeFactor
 
     if(clockwise):
         leftTargetAngle = getMotorAngle(leftMotor) + int(targetWheelAngleChange)
