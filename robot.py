@@ -2,7 +2,8 @@
 
 from BrickPi import *
 from time import sleep, time
-from math import pi, floor
+from math import pi, floor, degrees, radians
+from random import gauss
 import sys
 
 sonar       = PORT_4
@@ -11,9 +12,48 @@ rightMotor  = PORT_B
 leftBumper  = PORT_1
 rightBumper = PORT_2
 
-
 wheelRadius = 2.0#cm
 wheelSeparation = 16.0#cm
+
+class orientation:
+    def __init__():
+        self.x = 0#cm
+        self.y = 0#cm
+        self.a = 0#degrees
+
+    def moveForward(d):
+        e = gauss(0, 2)
+        f = gauss(0, 2)
+
+        self.x += (d + e)*cos(radians(a))
+        self.y += (d + e)*sin(radians(a))
+        self.a += f
+
+    def rotate(b):
+        g = gauss(0, 2)
+
+        self.a += b + g
+
+class particle:
+    def __init__(w):
+        self.x = orientation()
+        self.w = w
+
+class particleSet:
+    def __init__(n):
+        self.particles = list()
+        for i in range(n):
+            self.particles.append(particle(1.0/n))
+            
+    def moveForward(d):
+        for p in self.particles:
+            p.moveForward(d)
+
+    def rotate(a):
+        for p in self.particles:
+            p.rotate(a)
+
+pose = particleSet()
 
 def initialiseDiffDriveRobot():
     global leftMotor
@@ -133,6 +173,8 @@ def goDistance(targetDistance, desiredSpeed=40):
     distanceMovedLeft = 0
     distanceMovedRight = 0
 
+    pose.moveForward(targetDistance)
+
     fudgeFactor = 1.2
     targetDistance *= fudgeFactor
     
@@ -182,6 +224,8 @@ def accelerateToSpeed(desiredSpeed):
         sleep(0.1)
 
 def rotate(angle, clockwise=True): # angle to rotate in degrees
+    pose.rotate(angle if clockwise else -angle)
+
     # Initialise target values
     global leftMotor
     global rightMotor
