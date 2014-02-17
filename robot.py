@@ -12,8 +12,8 @@ rightMotor  = PORT_B
 leftBumper  = PORT_1
 rightBumper = PORT_2
 
-wheelRadius = 2.0#cm
-wheelSeparation = 16.0#cm
+wheelRadius = 1.8#cm
+wheelSeparation = 20.0#cm
 
 startX = 100#cm
 startY = 100#cm
@@ -27,19 +27,22 @@ class orientation:
         self.a = startA
 
     def moveForward(self, d):
-        sd = d/20.0
+        sd = d/40.0
+        meanR = -d/20.0
         e = gauss(0, sd)
-        f = gauss(0, sd)
+        f = gauss(meanR, sd)
 
         self.x += (d + e)*cos(radians(self.a))
         self.y += (d + e)*sin(radians(self.a))
         self.a += f
+        self.a = self.a%360
 
     def rotate(self, b):
-        sd = b/20.0
+        sd = b/90.0
         g = gauss(0, sd)
 
         self.a += b + g
+        self.a = self.a%360
 
 class particle:
     def __init__(self, w):
@@ -284,46 +287,47 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
         rightTargetAngle = getMotorAngle(rightMotor) + targetWheelAngleChange
         
     # Initialise Control Loop
-    leftMotorPower = 0
-    rightMotorPower = 0
-    if(clockwise):
-        leftDesiredSpeed = 20
-        rightDesiredSpeed = -20
-    else:
-        leftDesiredSpeed = -20
-        rightDesiredSpeed = 20
+    leftMotorPower = 100 * (1 if clockwise else -1)
+    rightMotorPower = 100 * (-1 if clockwise else 1)
 
     arrived = False
     print "Distance to travel=", wheelSeparation * 0.5 * radians(angle)
     
+    leftStartAngle = getMotorAngle(leftMotor)
+    rightStartAngle = getMotorAngle(rightMotor)
     # main control loop
     while(not arrived):
         BrickPi.MotorSpeed[leftMotor] = leftMotorPower
         BrickPi.MotorSpeed[rightMotor] = rightMotorPower
         BrickPiUpdateValues()
         
-        leftWheelVelocity = getVelocity(leftMotor)
-        rightWheelVelocity = getVelocity(rightMotor)
-#        print "Wheel Velocity=", leftWheelVelocity, rightWheelVelocity
-
-        leftError = leftWheelVelocity - leftDesiredSpeed
-        rightError = rightWheelVelocity - rightDesiredSpeed
-#        print "Velocity Error=", leftError, rightError
-
-        proportionalFactor=1
-        leftMotorPower -= int(proportionalFactor * leftError)
-        rightMotorPower -= int(proportionalFactor * rightError)
-#        print "Motor Power=", leftMotorPower, rightMotorPower
+#        leftWheelVelocity = getVelocity(leftMotor)
+#        rightWheelVelocity = getVelocity(rightMotor)
 
         leftAngleError = getMotorAngle(leftMotor) - leftTargetAngle
         rightAngleError = getMotorAngle(rightMotor) - rightTargetAngle
-#        print leftAngleError, rightAngleError
+
         if(clockwise):
-            arrived = leftAngleError > 0 or rightAngleError < 0
+            arrived = leftAngleError > rightAngleError
         else:
-            arrived = leftAngleError < 0 or rightAngleError > 0
+            arrived = leftAngleError < rightAngleError
+        
         print "Distance Remaining=", leftAngleError*wheelRadius, rightAngleError*wheelRadius
+
+        distanceMovedLeft = (getMotorAngle(leftMotor) - leftStartAngle) * wheelRadius
+        distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
+
+        angleTurned = (distanceMovedLeft - distanceMovedRight) / wheelSeparation
+        print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
+
     stop()
+    
+    distanceMovedLeft = (getMotorAngle(leftMotor) - leftStartAngle) * wheelRadius
+    distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
+
+    angleTurned = (distanceMovedLeft - distanceMovedRight) / wheelSeparation
+    print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
+
         
 def stop():
     global leftMotor
@@ -337,7 +341,7 @@ def getMotorAngle(motor): # returns motor angle in radians
     return radians(BrickPi.Encoder[motor]/2.0)
 
 def getMotorAngularVelocity(motor): # returns angular velocity in radians/second
-    sampleTime = 0.5
+    sampleTime = 0.05
     theta1 = getMotorAngle(motor)
     sleep(sampleTime)
     theta2 = getMotorAngle(motor)
