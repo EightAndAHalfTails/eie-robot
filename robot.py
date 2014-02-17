@@ -2,7 +2,7 @@
 
 from BrickPi import *
 from time import sleep, time
-from math import pi, floor, degrees, radians
+from math import pi, floor, degrees, radians, cos, sin
 from random import gauss
 import sys
 
@@ -16,44 +16,62 @@ wheelRadius = 2.0#cm
 wheelSeparation = 16.0#cm
 
 class orientation:
-    def __init__():
+    def __init__(self):
         self.x = 0#cm
         self.y = 0#cm
         self.a = 0#degrees
 
-    def moveForward(d):
-        e = gauss(0, 2)
-        f = gauss(0, 2)
+    def moveForward(self, d):
+        sd = d/20.0
+        e = gauss(0, sd)
+        f = gauss(0, sd)
 
-        self.x += (d + e)*cos(radians(a))
-        self.y += (d + e)*sin(radians(a))
+        self.x += (d + e)*cos(radians(self.a))
+        self.y += (d + e)*sin(radians(self.a))
         self.a += f
 
-    def rotate(b):
-        g = gauss(0, 2)
+    def rotate(self, b):
+        sd = b/20.0
+        g = gauss(0, sd)
 
         self.a += b + g
 
 class particle:
-    def __init__(w):
+    def __init__(self, w):
         self.x = orientation()
         self.w = w
+        
+    def moveForward(self, d):
+        self.x.moveForward(d)
+
+    def rotate(self, a):
+        self.x.rotate(a)
+
+#    def printcoords(self):
+#        print "({}, {}, {})".format(self.x.x, self.x.y, self.x.a)
 
 class particleSet:
-    def __init__(n):
+    def __init__(self, n):
         self.particles = list()
         for i in range(n):
             self.particles.append(particle(1.0/n))
             
-    def moveForward(d):
+    def moveForward(self, d):
         for p in self.particles:
             p.moveForward(d)
 
-    def rotate(a):
+    def rotate(self, a):
         for p in self.particles:
             p.rotate(a)
 
-pose = particleSet()
+#    def print(self):
+#        for p in self.particles:
+#            p.printcoords
+
+def printParticles(P):
+    print "DrawParticles:", [(p.x.x, p.x.y, p.x.a) for p in P.particles]
+
+pose = particleSet(8)
 
 def initialiseDiffDriveRobot():
     global leftMotor
@@ -173,22 +191,28 @@ def goDistance(targetDistance, desiredSpeed=40):
     distanceMovedLeft = 0
     distanceMovedRight = 0
 
-    pose.moveForward(targetDistance)
-
     fudgeFactor = 1.2
     targetDistance *= fudgeFactor
-    
+
+    initialSpeed = 150 * (1 if forwards else -1)
+    oldD = 0
+
     # Main control loop
     if forwards:
-        while(distanceMovedLeft < targetDistance or distanceMovedRight < targetDistance):
-            accelerateToSpeed(desiredSpeed)
+        while(abs(distanceMovedLeft) < abs(targetDistance) or abs(distanceMovedRight) < abs(targetDistance)):
+#            accelerateToSpeed(desiredSpeed)
+            setLeftMotor(initialSpeed)
+            setRightMotor(initialSpeed)
             distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)*pi/360
             distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)*pi/360
-    else:
-        while(distanceMovedLeft > targetDistance or distanceMovedRight > targetDistance):
-            accelerateToSpeed(-desiredSpeed)
-            distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)*pi/360
-            distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)*pi/360
+
+            distanceMoved = (distanceMovedLeft + distanceMovedRight) / 2
+            dx = distanceMoved - oldD
+            oldD = distanceMoved
+            pose.moveForward(dx)
+
+#            print dx
+            printParticles(pose)
     stop()
     print "Distance Moved =", distanceMovedLeft, distanceMovedRight
 
