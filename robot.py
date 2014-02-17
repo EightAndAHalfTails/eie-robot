@@ -15,11 +15,16 @@ rightBumper = PORT_2
 wheelRadius = 2.0#cm
 wheelSeparation = 16.0#cm
 
+startX = 100#cm
+startY = 100#cm
+startA = 0#degrees
+
 class orientation:
     def __init__(self):
-        self.x = 0#cm
-        self.y = 0#cm
-        self.a = 0#degrees
+        global startX, startY, startA
+        self.x = startX
+        self.y = startY
+        self.a = startA
 
     def moveForward(self, d):
         sd = d/20.0
@@ -69,7 +74,18 @@ class particleSet:
 #            p.printcoords
 
 def printParticles(P):
-    print "DrawParticles:", [(p.x.x, p.x.y, p.x.a) for p in P.particles]
+    print "drawParticles:" + str([(int(p.x.x), int(p.x.y), int(p.x.a)) for p in P.particles])
+
+def printSquare(d):
+    global startX, startY
+    p0 = (startX    , startY    )
+    p1 = (startX + d, startY    )
+    p2 = (startX + d, startY + d)
+    p3 = (startX    , startY + d)
+    print "drawLine:" + str(p0+p1)
+    print "drawLine:" + str(p1+p2)
+    print "drawLine:" + str(p2+p3)
+    print "drawLine:" + str(p3+p0)
 
 pose = particleSet(8)
 
@@ -191,7 +207,7 @@ def goDistance(targetDistance, desiredSpeed=40):
     distanceMovedLeft = 0
     distanceMovedRight = 0
 
-    fudgeFactor = 1.2
+    fudgeFactor = 1.0
     targetDistance *= fudgeFactor
 
     initialSpeed = 150 * (1 if forwards else -1)
@@ -203,8 +219,8 @@ def goDistance(targetDistance, desiredSpeed=40):
 #            accelerateToSpeed(desiredSpeed)
             setLeftMotor(initialSpeed)
             setRightMotor(initialSpeed)
-            distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)*pi/360
-            distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)*pi/360
+            distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)
+            distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)
 
             distanceMoved = (distanceMovedLeft + distanceMovedRight) / 2
             dx = distanceMoved - oldD
@@ -229,7 +245,6 @@ def accelerateToSpeed(desiredSpeed):
 
     closeEnough =max(abs(desiredSpeed/6), 1.0)
     
-#    while(abs(leftError)>abs(desiredSpeed/6.0) and abs(rightError)>abs(desiredSpeed/6.0)):
     while(abs(leftError)>closeEnough or abs(rightError)>closeEnough):
         # Calculate error signal
         leftError = getVelocity(leftMotor) - desiredSpeed
@@ -255,23 +270,18 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     global rightMotor
     global wheelRadius
     global wheelSeparation
-#    wheelRadius = 2.9
     wheelDiameter = 2 * wheelRadius
-#    wheelCircumference = 2*pi*wheelRadius
-#    targetDistance = angle*wheelSeparation/2
-#    targetWheelRotations = targetDistance/wheelCircumference
-#    targetWheelAngleChange = targetWheelRotations * 720
-    targetWheelAngleChange = 2 * angle * wheelSeparation/wheelDiameter
+    targetWheelAngleChange = radians(angle) * wheelSeparation/wheelDiameter
 
-    fudgeFactor = 1.4
+    fudgeFactor = 1.0
     targetWheelAngleChange *= fudgeFactor
 
     if(clockwise):
-        leftTargetAngle = getMotorAngle(leftMotor) + int(targetWheelAngleChange)
-        rightTargetAngle = getMotorAngle(rightMotor) - int(targetWheelAngleChange)
+        leftTargetAngle = getMotorAngle(leftMotor) + targetWheelAngleChange
+        rightTargetAngle = getMotorAngle(rightMotor) - targetWheelAngleChange
     else:
-        leftTargetAngle = getMotorAngle(leftMotor) - int(targetWheelAngleChange)
-        rightTargetAngle = getMotorAngle(rightMotor) + int(targetWheelAngleChange)
+        leftTargetAngle = getMotorAngle(leftMotor) - targetWheelAngleChange
+        rightTargetAngle = getMotorAngle(rightMotor) + targetWheelAngleChange
         
     # Initialise Control Loop
     leftMotorPower = 0
@@ -284,7 +294,7 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
         rightDesiredSpeed = 20
 
     arrived = False
-    print "Distance to travel=", wheelSeparation * pi* angle/360
+    print "Distance to travel=", wheelSeparation * 0.5 * radians(angle)
     
     # main control loop
     while(not arrived):
@@ -312,12 +322,9 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
             arrived = leftAngleError > 0 or rightAngleError < 0
         else:
             arrived = leftAngleError < 0 or rightAngleError > 0
-        print "Distance Remaining=", motorAngleToRadians(leftAngleError)*wheelRadius, motorAngleToRadians(rightAngleError)*wheelRadius
+        print "Distance Remaining=", leftAngleError*wheelRadius, rightAngleError*wheelRadius
     stop()
         
-def motorAngleToRadians(motorAngle):
-    return pi*motorAngle/360
-
 def stop():
     global leftMotor
     global rightMotor
@@ -325,17 +332,18 @@ def stop():
     BrickPi.MotorSpeed[rightMotor] = 0
     BrickPiUpdateValues()
 
-def getMotorAngle(motor): # returns motor angle in semidegrees
+def getMotorAngle(motor): # returns motor angle in radians
     BrickPiUpdateValues()
-    return BrickPi.Encoder[motor]
+    return radians(BrickPi.Encoder[motor]/2.0)
 
 def getMotorAngularVelocity(motor): # returns angular velocity in radians/second
-    sampleTime = 0.01
+    sampleTime = 0.5
     theta1 = getMotorAngle(motor)
     sleep(sampleTime)
     theta2 = getMotorAngle(motor)
     dtheta = (theta2 - theta1)
-    return (dtheta/sampleTime)*pi/360
+
+    return dtheta/sampleTime
 
 def getVelocity(motor):
     global wheelRadius
@@ -348,8 +356,9 @@ def speedTest(speed):
     BrickPi.MotorSpeed[leftMotor] = speed;
     BrickPi.MotorSpeed[rightMotor] = speed;
     while(True):
-        print "rps = ", getMotorAngularVelocity(leftMotor)/(2*pi)
-        print "velocity = ", getVelocity(leftMotor)
+        rps = getMotorAngularVelocity(leftMotor)/(2*pi)
+        vel = getVelocity(leftMotor)
+        print "rps = {},\tvel = {}".format(rps, vel) 
     
 def crashTest():
     global leftBumper
