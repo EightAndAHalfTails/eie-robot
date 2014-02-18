@@ -2,11 +2,11 @@
 
 from BrickPi import *
 from time import sleep, time
-from math import pi, floor, degrees, radians, cos, sin
+from math import *
 from random import gauss
 import sys
 
-sonar       = PORT_4
+sonar       = PORT_2
 leftMotor   = PORT_C
 rightMotor  = PORT_B
 leftBumper  = PORT_1
@@ -21,10 +21,9 @@ startA = 0#degrees
 
 class orientation:
     def __init__(self):
-        global startX, startY, startA
-        self.x = startX
-        self.y = startY
-        self.a = startA
+        self.x = 0
+        self.y = 0
+        self.a = 0
 
     def moveForward(self, d):
         sd = d/40.0
@@ -35,14 +34,14 @@ class orientation:
         self.x += (d + e)*cos(radians(self.a))
         self.y += (d + e)*sin(radians(self.a))
         self.a += f
-        self.a = self.a%360
+        self.a = self.a
 
     def rotate(self, b):
         sd = b/90.0
         g = gauss(0, sd)
 
         self.a += b + g
-        self.a = self.a%360
+        self.a = self.a
 
 class particle:
     def __init__(self, w):
@@ -71,13 +70,24 @@ class particleSet:
     def rotate(self, a):
         for p in self.particles:
             p.rotate(a)
+    
+    def estimatePosition(self):
+        (xx, yy, aa) = (0,0,0)
+        for p in self.particles:
+            xx += p.x.x
+            yy += p.x.y
+            aa += p.x.a
+        size = len(self.particles)
+        return (xx/size, yy/size, aa/size)
 
 #    def print(self):
 #        for p in self.particles:
 #            p.printcoords
 
 def printParticles(P):
-    print "drawParticles:" + str([(int(p.x.x), int(p.x.y), int(p.x.a)) for p in P.particles])
+    print "drawParticles:" + str([(int(p.x.x)+startX,
+                                   int(p.x.y)+startY,
+                                   int((p.x.a+startA)%360)) for p in P.particles])
 
 def printSquare(d):
     global startX, startY
@@ -90,7 +100,7 @@ def printSquare(d):
     print "drawLine:" + str(p2+p3)
     print "drawLine:" + str(p3+p0)
 
-pose = particleSet(8)
+pose = particleSet(100)
 
 def initialiseDiffDriveRobot():
     global leftMotor
@@ -233,7 +243,7 @@ def goDistance(targetDistance, desiredSpeed=40):
 #            print dx
             printParticles(pose)
     stop()
-    print "Distance Moved =", distanceMovedLeft, distanceMovedRight
+#    print "Distance Moved =", distanceMovedLeft, distanceMovedRight
 
 def accelerateToSpeed(desiredSpeed):
     upperLimit = 80
@@ -252,7 +262,7 @@ def accelerateToSpeed(desiredSpeed):
         # Calculate error signal
         leftError = getVelocity(leftMotor) - desiredSpeed
         rightError = getVelocity(rightMotor) - desiredSpeed
-        print "Error =", leftError, rightError, "\r",
+#        print "Error =", leftError, rightError, "\r",
         sys.stdout.flush()
 
         # Apply feedback
@@ -291,7 +301,7 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     rightMotorPower = 100 * (-1 if clockwise else 1)
 
     arrived = False
-    print "Distance to travel=", wheelSeparation * 0.5 * radians(angle)
+#    print "Distance to travel=", wheelSeparation * 0.5 * radians(angle)
     
     leftStartAngle = getMotorAngle(leftMotor)
     rightStartAngle = getMotorAngle(rightMotor)
@@ -312,13 +322,13 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
         else:
             arrived = leftAngleError < rightAngleError
         
-        print "Distance Remaining=", leftAngleError*wheelRadius, rightAngleError*wheelRadius
+#        print "Distance Remaining=", leftAngleError*wheelRadius, rightAngleError*wheelRadius
 
         distanceMovedLeft = (getMotorAngle(leftMotor) - leftStartAngle) * wheelRadius
         distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
 
         angleTurned = (distanceMovedLeft - distanceMovedRight) / wheelSeparation
-        print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
+#        print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
 
     stop()
     
@@ -326,7 +336,25 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
 
     angleTurned = (distanceMovedLeft - distanceMovedRight) / wheelSeparation
-    print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
+#    print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
+
+def navigateToWaypoint(x, y):
+    (curX, curY, curA) = pose.estimatePosition()
+    dx = x - curX
+    dy = y - curY
+    bearing = atan2(dy, dx)
+    distance = hypot(dx, dy)
+    da = (degrees(bearing) - curA)%360
+
+    if 0 < da < 180:
+        print "Rotating by {}".format(da)
+        rotate(da)
+    else:
+        print "Rotating by -{}".format(360-da)
+        rotate(360-da, clockwise=False)
+        
+    print "Travelling {}cm".format(distance)
+    goDistance(distance)
 
         
 def stop():
