@@ -74,13 +74,18 @@ class particleSet:
             p.rotate(a)
     
     def estimatePosition(self):
-        (xx, yy, aa) = (0,0,0)
+        (xx, yy, aa) = (0,0,(0,0))
         for p in self.particles:
             xx += p.x.x
             yy += p.x.y
-            aa += p.x.a
+            aa[0] += sin(radians(p.x.a))
+            aa[1] += cos(radians(p.x.a))
         size = len(self.particles)
-        return (xx/size, yy/size, aa/size)
+        return (xx/size, yy/size, atan2(aa[0]/size, aa[1]/size))
+
+    def reweight(self, sonar):
+        for p in self.particles:
+            p.w *= calculateLikelihood(p.x.x, p.x.y, p.x.a, sonar)
 
     def normalise(self):
         totalWeights = sum([p.w for p in self.particles])
@@ -474,6 +479,13 @@ def navigateWaypoints(waypointList):
         if not mustRotate and not mustAdvance: # arrived
             waypoints = waypoints[1:] # remove first waypoint
 
+        # update particle weights
+        reading = readSonar()
+        pose.reweight(reading)
+
+        # resample particle set
+        pose.normalise()
+        pose.resample()
         printParticles(pose)
             
 def setMotors(motorTuple):
