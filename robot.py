@@ -1,10 +1,12 @@
 #44:33:4c:6c:c1:92
+#http://129.31.222.18:9000/
 
 from BrickPi import *
 from time import sleep, time
 from math import *
 from random import gauss, uniform
 import sys
+from particleDataStructures import *
 
 sonar       = PORT_2
 leftMotor   = PORT_C
@@ -495,3 +497,43 @@ def readEncoders():
 
 def encoderToDistance(encode):
     return wheelRadius * radians(encode/2.0)        
+
+def calculateLikelihood(x, y, a, z):
+    sd = 0.0
+    k = 0.0
+    tmp = findWall(x, y, a)
+    m = tmp[1]
+    wall = tmp[0]
+    Ax = wall[0]
+    Ay = wall[1]
+    Bx = wall[2]
+    By = wall[3]
+
+    print "m = {}".format(m)
+
+    beta = acos((cos(a)*(Ay-By)+sin(a)*(Bx-Ax))/(sqrt(pow((Ay - By),2) + pow((Bx - Ax),2))))
+   
+    if abs(beta) < 360:
+    	likelihood = getGaussian(m, sd, z) + k
+
+
+def findWall(x, y , a):
+    for w in mymap.walls:
+        Ax = mymap.walls[w][0]
+        Ay = mymap.walls[w][1]
+        Bx = mymap.walls[w][2]
+        By = mymap.walls[w][3]
+        
+        slope = (By - Ay)/(Bx - Ax)
+        b = By - slope*Bx
+
+
+        m = ((By - Ay)*(Ax - x)-(Bx - Ax)*(Ay - y))/((By - Ay)*cos(a) - (Bx - Ax)*sin(a))
+        
+        hitsWall = (x + m*cos(a), y + m*sin(a))
+
+        if min(Ax, Bx) < hitWall[0] < max(Ax, Bx) and min(Ay, By) < hitWall[1] < max(Ay, By) and abs(hitsWall[1] - (slope*hitWall[0] + b)) < 0.5:
+            return (mymap.walls[w], m)
+
+def getGaussian(m, sd, z):
+	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
