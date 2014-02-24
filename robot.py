@@ -74,14 +74,14 @@ class particleSet:
             p.rotate(a)
     
     def estimatePosition(self):
-        (xx, yy, aa) = (0,0,(0,0))
+        (xx, yy, sina, cosa) = (0,0,0,0)
         for p in self.particles:
             xx += p.x.x
             yy += p.x.y
-            aa[0] += sin(radians(p.x.a))
-            aa[1] += cos(radians(p.x.a))
+            sina += sin(radians(p.x.a))
+            cosa += cos(radians(p.x.a))
         size = len(self.particles)
-        return (xx/size, yy/size, atan2(aa[0]/size, aa[1]/size))
+        return (xx/size, yy/size, atan2(sina/size, cosa/size))
 
     def reweight(self, sonar):
         for p in self.particles:
@@ -439,7 +439,7 @@ def navigateWaypoints(waypointList):
     waypoints = waypointList
     while(True):
         # figure out where to go
-        (tarX, tarY) = waypoints(0)
+        (tarX, tarY) = waypoints[0]
         (curX, curY, curA) = pose.estimatePosition()
 
         dx = tarX - curX
@@ -455,8 +455,8 @@ def navigateWaypoints(waypointList):
 
         # work out change from last step
         currEncoders = readEncoders()
-        encoderChange = ( currEncoders(0) - lastEncoders(0),
-                          currEncoders(1) - lastEncoders(1) )
+        encoderChange = ( currEncoders[0] - lastEncoders[0],
+                          currEncoders[1] - lastEncoders[1] )
         encoderDistance = map(encoderToDistance, encoderChange)
 
         # update motors and particle model
@@ -488,9 +488,9 @@ def navigateWaypoints(waypointList):
         pose.resample()
         printParticles(pose)
             
-def setMotors(motorTuple):
-    setLeftMotor(motorTuple(0))
-    setRightMotor(motorTuple(1))
+def setMotors(left, right):
+    setLeftMotor(left)
+    setRightMotor(right)
                  
 def navigateClockwise():
     setMotors(100, -100)
@@ -535,7 +535,7 @@ def calculateLikelihood(x, y, a, z):
         likelihood = 1.0
 
     print "likelihood = {}".format(likelihood)
-
+    return likelihood
 
 def findWall(x, y , a):
 
@@ -543,8 +543,11 @@ def findWall(x, y , a):
     for w in mymap.walls:
         (Ax, Ay, Bx, By) = w
     
-
-        m = ((By - Ay)*(Ax - x)-(Bx - Ax)*(Ay - y))/((By - Ay)*cos(radians(a)) - (Bx - Ax)*sin(radians(a)))
+        denom = ((By - Ay)*cos(radians(a)) - (Bx - Ax)*sin(radians(a)))
+        if denom != 0:
+            m = ((By - Ay)*(Ax - x)-(Bx - Ax)*(Ay - y))/denom
+        else:
+            m = float("inf")
         
         hitsWallAt = (x + m*cos(radians(a)), y + m*sin(radians(a)))
         print hitsWallAt
