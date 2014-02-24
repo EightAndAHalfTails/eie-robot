@@ -3,7 +3,7 @@
 from BrickPi import *
 from time import sleep, time
 from math import *
-from random import gauss
+from random import gauss, uniform
 import sys
 
 sonar       = PORT_2
@@ -80,9 +80,27 @@ class particleSet:
         size = len(self.particles)
         return (xx/size, yy/size, aa/size)
 
-#    def print(self):
-#        for p in self.particles:
-#            p.printcoords
+    def normalise(self):
+        totalWeights = sum([p.w for p in self.particles])
+        for p in self.particles:
+            p.w /= totalWeights
+
+    def resample(self):
+        N = len(self.particles)
+        cdf = [sum([p.w for p in self.particles][:end]) for end in range(N)]
+        resampled = []
+        for i in range(N):
+            copyIndex = 0
+            urand = uniform(0, 1)
+            for index in cdf:
+                if index > urand:
+                    copyIndex = index #first element in cdf with weight greater than urand
+                    break
+            resampled[i] = particle(1.0/N)
+            resampled[i].x = ( self.particles[copyIndex].x, 
+                               self.particles[copyIndex].y,
+                               self.particles[copyIndex].a ) # deep copy
+        self.particles = resampled
 
 def printParticles(P):
     print "drawParticles:" + str([(int(p.x.x)+startX,
@@ -408,4 +426,72 @@ def crashTest():
         if not l and not r:
             print "Neither"
             
+def navigateWaypoints(waypointList):
+    lastEncoders = readEncoders()
+    waypoints = waypointList
+    while(True):
+        # figure out where to go
+        (tarX, tarY) = waypoints(0)
+        (curX, curY, curA) = pose.estimatePosition()
+
+        dx = tarX - curX
+        dy = tarY - curY
+        bearing = atan2(dy, dx)
+
+        distance = hypot(dx, dy)
+        da = (degrees(bearing) - curA)%360
         
+        # work out action to be taken
+        mustRotate = abs(da) < 2
+        mustAdvance = distance > 0
+
+        # work out change from last step
+        currEncoders = readEncoders()
+        encoderChange = ( currEncoders(0) - lastEncoders(0),
+                          currEncoders(1) - lastEncoders(1) )
+        encoderDistance = map(encoderToDistance, encoderChange)
+
+        # update motors and particle model
+        if mustRotate:
+            if 2 < da < 180:
+                navigateClockwise()
+                
+            if 180 < da < 358:
+                navigateAnticlockwise()
+        
+            (l, r) = encoderDistance
+            angleRotated = (l - r) / wheelSeparation
+            pose.rotate(angleRotated)
+
+        if not mustRotate and mustAdvance:
+            navigateForwards()
+            distanceTravelled = sum(encoderDistance)/len(encoderDistance)
+            pose.moveForward(distanceTravelled)
+
+        if not mustRotate and not mustAdvance: # arrived
+            waypoints = waypoints[1:] # remove first waypoint
+
+        printParticles(pose)
+            
+def setMotors(motorTuple):
+    setLeftMotor(motorTuple(0))
+    setRightMotor(motorTuple(1))
+                 
+def navigateClockwise():
+    setMotors(100, -100)
+
+def navigateAnticlockwise():
+    setMotors(-100, 100)
+
+def navigateForwards():
+    setMotors(200, 200)
+
+def readEncoders():
+    global leftMotor
+    global rightMotor
+    BrickPiUpdateValues()
+    return ( BrickPi.Encoder[leftMotor],
+             BrickPi.Encoder[rightMotor] )
+
+def encoderToDistance(encode):
+    return wheelRadius * radians(encode/2.0)        
