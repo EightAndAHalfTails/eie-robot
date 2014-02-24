@@ -109,6 +109,7 @@ def printParticles(P):
                                    int(p.x.y)+startY,
                                    int((p.x.a+startA)%360)) for p in P.particles])
 
+
 def printSquare(d):
     global startX, startY
     p0 = (startX    , startY    )
@@ -499,7 +500,7 @@ def encoderToDistance(encode):
     return wheelRadius * radians(encode/2.0)        
 
 def calculateLikelihood(x, y, a, z):
-    sd = 0.0
+    sd = 3.0
     k = 0.0
     tmp = findWall(x, y, a)
     m = tmp[1]
@@ -511,29 +512,39 @@ def calculateLikelihood(x, y, a, z):
 
     print "m = {}".format(m)
 
-    beta = acos((cos(a)*(Ay-By)+sin(a)*(Bx-Ax))/(sqrt(pow((Ay - By),2) + pow((Bx - Ax),2))))
+    beta = acos((cos(radians(a))*(Ay-By)+sin(radians(a))*(Bx-Ax))/(sqrt(pow((Ay - By),2) + pow((Bx - Ax),2))))
    
-    if abs(beta) < 360:
+   
+    threshold = 360
+    if abs(beta) < radians(threshold):
+        print m, sd, z
     	likelihood = getGaussian(m, sd, z) + k
+    else:
+        likelihood = 1.0
+
+    print "likelihood = {}".format(likelihood)
 
 
 def findWall(x, y , a):
+
+    tmpList = []
     for w in mymap.walls:
-        Ax = mymap.walls[w][0]
-        Ay = mymap.walls[w][1]
-        Bx = mymap.walls[w][2]
-        By = mymap.walls[w][3]
+        (Ax, Ay, Bx, By) = w
+    
+
+        m = ((By - Ay)*(Ax - x)-(Bx - Ax)*(Ay - y))/((By - Ay)*cos(radians(a)) - (Bx - Ax)*sin(radians(a)))
         
-        slope = (By - Ay)/(Bx - Ax)
-        b = By - slope*Bx
+        hitsWallAt = (x + m*cos(radians(a)), y + m*sin(radians(a)))
+        print hitsWallAt
 
+        if min(Ax, Bx)-0.005 <= hitsWallAt[0] <= max(Ax, Bx)+0.005 and min(Ay, By)-0.005 < hitsWallAt[1] < max(Ay, By)+0.005 and m > 0:
 
-        m = ((By - Ay)*(Ax - x)-(Bx - Ax)*(Ay - y))/((By - Ay)*cos(a) - (Bx - Ax)*sin(a))
-        
-        hitsWall = (x + m*cos(a), y + m*sin(a))
+            tmpList.append((w, m))
+            print tmpList
 
-        if min(Ax, Bx) < hitWall[0] < max(Ax, Bx) and min(Ay, By) < hitWall[1] < max(Ay, By) and abs(hitsWall[1] - (slope*hitWall[0] + b)) < 0.5:
-            return (mymap.walls[w], m)
+    return (min(tmpList, key = lambda x: x[1]))
 
 def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
+
+

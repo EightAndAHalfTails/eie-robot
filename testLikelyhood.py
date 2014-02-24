@@ -2,4 +2,4 @@ from robot import *
 
 
 
-calculateLikelihood(10, 10, 180, 10)
+calculateLikelihood(40, 150, 45, 25)
