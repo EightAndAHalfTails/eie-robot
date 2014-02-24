@@ -49,6 +49,11 @@ class particle:
     def __init__(self, w):
         self.x = orientation()
         self.w = w
+
+    def setTo(self, x, y, a):
+        self.x.x = x
+        self.x.y = y
+        self.x.a = a
         
     def moveForward(self, d):
         self.x.moveForward(d)
@@ -64,7 +69,11 @@ class particleSet:
         self.particles = list()
         for i in range(n):
             self.particles.append(particle(1.0/n))
-            
+     
+    def setTo(self, x, y, a):
+        for p in self.particles:
+            p.setTo(x,y,a)
+       
     def moveForward(self, d):
         for p in self.particles:
             p.moveForward(d)
