@@ -43,7 +43,6 @@ class orientation:
         g = gauss(0, sd)
 
         self.a += b + g
-        self.a = self.a
 
 class particle:
     def __init__(self, w):
@@ -89,7 +88,7 @@ class particleSet:
             sina += sin(radians(p.x.a))
             cosa += cos(radians(p.x.a))
         size = len(self.particles)
-        return (xx/size, yy/size, atan2(sina/size, cosa/size))
+        return (xx/size, yy/size, degrees(atan2(sina/size, cosa/size)))
 
     def reweight(self, sonar):
         for p in self.particles:
@@ -107,14 +106,14 @@ class particleSet:
         for i in range(N):
             copyIndex = 0
             urand = uniform(0, 1)
-            for index in cdf:
-                if index > urand:
+            for index in range(len(cdf)):
+                if cdf[index] > urand:
                     copyIndex = index #first element in cdf with weight greater than urand
                     break
             resampled.append(particle(1.0/N))
-            resampled[i].x = ( self.particles[copyIndex].x, 
-                               self.particles[copyIndex].y,
-                               self.particles[copyIndex].a ) # deep copy
+            resampled[i].setTo( self.particles[copyIndex].x.x, 
+                                self.particles[copyIndex].x.y,
+                                self.particles[copyIndex].x.a ) # deep copy
         self.particles = resampled
 
 def printParticles(P):
@@ -135,6 +134,7 @@ def printSquare(d):
     print "drawLine:" + str(p3+p0)
 
 pose = particleSet(100)
+pose.setTo(84, 30, 0)
 
 def initialiseDiffDriveRobot():
     global leftMotor
@@ -458,33 +458,43 @@ def navigateWaypoints(waypointList):
         da = (degrees(bearing) - curA)%360
         
         # work out action to be taken
-        mustRotate = abs(da) < 2
-        mustAdvance = distance > 0
-
+        minAngle = 2#degrees
+        minDistance = 2#cm
+        mustRotate = minAngle < da < 360-minAngle 
+        mustAdvance = distance > minDistance
+#        print "Must rotate {} and advance {}.".format(da, distance)
+#        print "Will " + ("rotate" if mustRotate else "advance")
         # work out change from last step
         currEncoders = readEncoders()
         encoderChange = ( currEncoders[0] - lastEncoders[0],
                           currEncoders[1] - lastEncoders[1] )
         encoderDistance = map(encoderToDistance, encoderChange)
+        lastEncoders = currEncoders
+#        print "\tCurrent Encoders = {}\n\tLast Encoders = {}\n\tEncoder distance change = {}".format(currEncoders, lastEncoders, encoderDistance)
 
         # update motors and particle model
         if mustRotate:
             if 2 < da < 180:
+                print "Rotating Clockwise..."
                 navigateClockwise()
                 
             if 180 < da < 358:
+                print "Rotating Anticlockwise..."
                 navigateAnticlockwise()
         
             (l, r) = encoderDistance
-            angleRotated = (l - r) / wheelSeparation
+            angleRotated = degrees((l - r) / wheelSeparation)
+#            print "Rotated {} degrees".format(angleRotated)
             pose.rotate(angleRotated)
 
         if not mustRotate and mustAdvance:
+            print "Advancing..."                
             navigateForwards()
             distanceTravelled = sum(encoderDistance)/len(encoderDistance)
             pose.moveForward(distanceTravelled)
 
         if not mustRotate and not mustAdvance: # arrived
+            print "Waypoint {} reached!".format(waypoints[0])
             waypoints = waypoints[1:] # remove first waypoint
 
         # update particle weights
@@ -494,7 +504,7 @@ def navigateWaypoints(waypointList):
         # resample particle set
         pose.normalise()
         pose.resample()
-        printParticles(pose)
+#        printParticles(pose)
             
 def setMotors(left, right):
     setLeftMotor(left)
@@ -530,19 +540,19 @@ def calculateLikelihood(x, y, a, z):
     Bx = wall[2]
     By = wall[3]
 
-    print "m = {}".format(m)
+#    print "m = {}".format(m)
 
     beta = acos((cos(radians(a))*(Ay-By)+sin(radians(a))*(Bx-Ax))/(sqrt(pow((Ay - By),2) + pow((Bx - Ax),2))))
    
    
     threshold = 360
     if abs(beta) < radians(threshold):
-        print m, sd, z
+#        print m, sd, z
     	likelihood = getGaussian(m, sd, z) + k
     else:
         likelihood = 0.0
 
-    print "likelihood = {}".format(likelihood)
+#    print "likelihood = {}".format(likelihood)
     return likelihood
 
 def findWall(x, y , a):
@@ -558,14 +568,18 @@ def findWall(x, y , a):
             m = float("inf")
         
         hitsWallAt = (x + m*cos(radians(a)), y + m*sin(radians(a)))
-        print hitsWallAt
+#        print "Robot at {} hits wall {} at {}".format((x, y, a), w, hitsWallAt)
 
         if min(Ax, Bx)-0.005 <= hitsWallAt[0] <= max(Ax, Bx)+0.005 and min(Ay, By)-0.005 < hitsWallAt[1] < max(Ay, By)+0.005 and m > 0:
 
             tmpList.append((w, m))
-            print tmpList
+#            print "Hits in front within endpoints of wall. Adding {} to list: {}".format(w, tmpList)
 
-    return (min(tmpList, key = lambda x: x[1]))
+    if tmpList == []:
+        e = Exception("No walls found in front of estimated position: Has the robot left the maze?")
+        raise e
+    else:
+        return (min(tmpList, key = lambda x: x[1]))
 
 def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
