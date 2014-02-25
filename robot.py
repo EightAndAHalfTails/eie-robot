@@ -71,8 +71,10 @@ class particleSet:
             self.particles.append(particle(1.0/n))
      
     def setTo(self, x, y, a):
+        weight = 1.0/len(self.particles)
         for p in self.particles:
             p.setTo(x,y,a)
+            p.w = weight
        
     def moveForward(self, d):
         for p in self.particles:
