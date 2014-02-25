@@ -39,7 +39,7 @@ class orientation:
         self.a = self.a
 
     def rotate(self, b):
-        sd = b/90.0
+        sd = 2.0
         g = gauss(0, sd)
 
         self.a += b + g
@@ -60,9 +60,6 @@ class particle:
 
     def rotate(self, a):
         self.x.rotate(a)
-
-#    def printcoords(self):
-#        print "({}, {}, {})".format(self.x.x, self.x.y, self.x.a)
 
 class particleSet:
     def __init__(self, n):
