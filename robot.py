@@ -524,7 +524,7 @@ def encoderToDistance(encode):
 
 def calculateLikelihood(x, y, a, z):
     sd = 3.0
-    k = 0.0
+    k = 0.05
     tmp = findWall(x, y, a)
     m = tmp[1]
     wall = tmp[0]
@@ -543,7 +543,7 @@ def calculateLikelihood(x, y, a, z):
         print m, sd, z
     	likelihood = getGaussian(m, sd, z) + k
     else:
-        likelihood = 1.0
+        likelihood = 0.0
 
     print "likelihood = {}".format(likelihood)
     return likelihood
