@@ -111,7 +111,7 @@ class particleSet:
                 if index > urand:
                     copyIndex = index #first element in cdf with weight greater than urand
                     break
-            resampled[i] = particle(1.0/N)
+            resampled.append(particle(1.0/N))
             resampled[i].x = ( self.particles[copyIndex].x, 
                                self.particles[copyIndex].y,
                                self.particles[copyIndex].a ) # deep copy
