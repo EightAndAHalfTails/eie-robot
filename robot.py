@@ -9,6 +9,7 @@ import sys
 from particleDataStructures import *
 
 sonar       = PORT_2
+sonarMotor  = PORT_
 leftMotor   = PORT_C
 rightMotor  = PORT_B
 leftBumper  = PORT_1
@@ -583,5 +584,10 @@ def findWall(x, y , a):
 
 def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
+
+
+def scanArea():
+    leftTargetAngle = getMotorAngle(leftMotor)
+    readSonar()
 
 
