@@ -9,6 +9,7 @@ import sys
 from particleDataStructures import *
 
 sonar       = PORT_2
+sonarMotor  = PORT_D
 leftMotor   = PORT_C
 rightMotor  = PORT_B
 leftBumper  = PORT_1
@@ -17,6 +18,7 @@ rightBumper = PORT_2
 wheelRadius = 1.8#cm
 wheelSeparation = 20.0#cm
 
+SCALE = 2.0
 startX = 100#cm
 startY = 100#cm
 startA = 0#degrees
@@ -39,8 +41,9 @@ class orientation:
         self.a = self.a
 
     def rotate(self, b):
-        sd = 2.0
-        g = gauss(0, sd)
+        mu = -b/64.0
+        sd = b/10.0
+        g = gauss(mu, sd)
 
         self.a += b + g
 
@@ -117,10 +120,10 @@ class particleSet:
         self.particles = resampled
 
 def printParticles(P):
-    print "drawParticles:" + str([(int(p.x.x)+startX,
-                                   int(p.x.y)+startY,
-                                   int((p.x.a+startA)%360)) for p in P.particles])
-
+#    print "drawParticles:" + str([(SCALE*(int(p.x.x)+startX),
+#                                   SCALE*(startY - int(p.x.y)),
+#                                   int((p.x.a+startA)%360)) for p in P.particles])
+    canvas.drawParticles([(int(p.x.x), int(p.x.y), int(p.x.a)) for p in P.particles])
 
 def printSquare(d):
     global startX, startY
@@ -458,8 +461,8 @@ def navigateWaypoints(waypointList):
         da = (degrees(bearing) - curA)%360
         
         # work out action to be taken
-        minAngle = 2#degrees
-        minDistance = 2#cm
+        minAngle = 10#degrees
+        minDistance = 5#cm
         mustRotate = minAngle < da < 360-minAngle 
         mustAdvance = distance > minDistance
 #        print "Must rotate {} and advance {}.".format(da, distance)
@@ -474,16 +477,16 @@ def navigateWaypoints(waypointList):
 
         # update motors and particle model
         if mustRotate:
-            if 2 < da < 180:
-                print "Rotating Clockwise..."
-                navigateClockwise()
-                
-            if 180 < da < 358:
+            if minAngle < da < 180:
                 print "Rotating Anticlockwise..."
                 navigateAnticlockwise()
+                
+            if 180 < da < 360 - minAngle:
+                print "Rotating Clockwise..."
+                navigateClockwise()
         
             (l, r) = encoderDistance
-            angleRotated = degrees((l - r) / wheelSeparation)
+            angleRotated = degrees((r - l) / wheelSeparation)
 #            print "Rotated {} degrees".format(angleRotated)
             pose.rotate(angleRotated)
 
@@ -495,6 +498,8 @@ def navigateWaypoints(waypointList):
 
         if not mustRotate and not mustAdvance: # arrived
             print "Waypoint {} reached!".format(waypoints[0])
+            stop()
+            sleep(1)
             waypoints = waypoints[1:] # remove first waypoint
 
         # update particle weights
@@ -504,20 +509,22 @@ def navigateWaypoints(waypointList):
         # resample particle set
         pose.normalise()
         pose.resample()
-#        printParticles(pose)
+        printParticles(pose)
+        print pose.estimatePosition()
+        print "distance to waypoint:", (dx, dy, da)
             
 def setMotors(left, right):
     setLeftMotor(left)
     setRightMotor(right)
                  
 def navigateClockwise():
-    setMotors(100, -100)
+    setMotors(80, -80)
 
 def navigateAnticlockwise():
-    setMotors(-100, 100)
+    setMotors(-80, 80)
 
 def navigateForwards():
-    setMotors(200, 200)
+    setMotors(120, 120)
 
 def readEncoders():
     global leftMotor
@@ -531,7 +538,7 @@ def encoderToDistance(encode):
 
 def calculateLikelihood(x, y, a, z):
     sd = 3.0
-    k = 0.05
+    k = 0.01
     tmp = findWall(x, y, a)
     m = tmp[1]
     wall = tmp[0]
@@ -584,4 +591,17 @@ def findWall(x, y , a):
 def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
 
-
+def rotateTest():
+    lastEncoders = readEncoders()
+    while True:
+        currEncoders = readEncoders()
+        encoderChange = ( currEncoders[0] - lastEncoders[0],
+                          currEncoders[1] - lastEncoders[1] )
+        encoderDistance = map(encoderToDistance, encoderChange)
+        lastEncoders = currEncoders
+        navigateClockwise()
+        
+        (l, r) = encoderDistance
+        angleRotated = degrees((r - l) / wheelSeparation)
+        pose.rotate(angleRotated)
+        print "Pose = {}".format(pose.estimatePosition())
