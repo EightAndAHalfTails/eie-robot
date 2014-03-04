@@ -592,8 +592,11 @@ def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
 
 def scanArea():
-    leftTargetAngle = getMotorAngle(leftMotor)
-    readSonar()
+    global sonarMotor
+    while(True):
+	BrickPi.MotorSpeed[sonarMotor] = 70
+        #leftTargetAngle = getMotorAngle(leftMotor)
+        #readSonar()
 
 
 def rotateTest():
