@@ -33,7 +33,7 @@ class orientation:
 
     def moveForward(self, d):
         sd = d/40.0
-        meanR = -d/20.0
+        meanR = d/15.0
         e = gauss(0, sd)
         f = gauss(meanR, sd)
 
@@ -257,7 +257,7 @@ def goDistance(targetDistance, desiredSpeed=40):
     global leftMotor
     global rightMotor
     global wheelRadius
-    startTime = time()
+    #startTime = time()
     startAngleLeft = getMotorAngle(leftMotor)
     startAngleRight = getMotorAngle(rightMotor)
     distanceMovedLeft = 0
@@ -282,13 +282,15 @@ def goDistance(targetDistance, desiredSpeed=40):
             dx = distanceMoved - oldD
             oldD = distanceMoved
             # update particle weights
+            pose.moveForward(dx)
+
             reading = readSonar()
             pose.reweight(reading)
 
             # resample particle set
             pose.normalise()
             pose.resample()
-            printParticles(pose)
+            #printParticles(pose)
 
     stop()
 #    print "Distance Moved =", distanceMovedLeft, distanceMovedRight
@@ -384,7 +386,7 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
 
     angleTurned = (distanceMovedRight - distanceMovedLeft) / wheelSeparation
-    pos.rotate(angleTurned)
+    pose.rotate(angleTurned)
     # update particle weights
     reading = readSonar()
     pose.reweight(reading)
@@ -392,7 +394,7 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     # resample particle set
     pose.normalise()
     pose.resample()
-    printParticles(pose)
+    #printParticles(pose)
 
 def navigateToWaypoint(x, y):
     (curX, curY, curA) = pose.estimatePosition()
@@ -469,61 +471,26 @@ def navigateWaypoints(waypointList):
     waypoints = waypointList
     while(waypoints):
         # figure out where to go
+        
         (tarX, tarY) = waypoints[0]
         (curX, curY, curA) = pose.estimatePosition()
-
+        print "Cur{} {} Tar {} {}".format(curX, curY, tarX, tarY)
         dx = tarX - curX
         dy = tarY - curY
         bearing = atan2(dy, dx)
+        print "dx dy {} {}".format(dx, dy)
 
         distance = hypot(dx, dy)
         da = (degrees(bearing) - curA)%360
 
         ###Replacing with single rotate and advance###
         rotateClockwise = da<180
+        print "Rotating {}".format(da)
         rotateAngle = da if rotateClockwise else 360-da
         rotate(rotateAngle, rotateClockwise)
 
         goDistance(distance)
-"""        
-        # work out action to be taken
-        minAngle = 10#degrees
-        minDistance = 5#cm
-        mustRotate = minAngle < da < 360-minAngle 
-        mustAdvance = distance > minDistance
-        # work out change from last step
-        currEncoders = readEncoders()
-        encoderChange = ( currEncoders[0] - lastEncoders[0],
-                          currEncoders[1] - lastEncoders[1] )
-        encoderDistance = map(encoderToDistance, encoderChange)
-        lastEncoders = currEncoders
 
-        # update motors and particle model
-        if mustRotate:
-            if minAngle < da < 180:
-                print "Rotating Anticlockwise..."
-                navigateAnticlockwise()
-                
-            if 180 < da < 360 - minAngle:
-                print "Rotating Clockwise..."
-                navigateClockwise()
-        
-            (l, r) = encoderDistance
-            angleRotated = degrees((r - l) / wheelSeparation)
-            pose.rotate(angleRotated)
-
-        if not mustRotate and mustAdvance:
-            print "Advancing..."                
-            navigateForwards()
-            distanceTravelled = sum(encoderDistance)/len(encoderDistance)
-            pose.moveForward(distanceTravelled)
-
-        if not mustRotate and not mustAdvance: # arrived
-            print "Waypoint {} reached!".format(waypoints[0])
-            stop()
-            sleep(1)
-            waypoints = waypoints[1:] # remove first waypoint
-"""
         # update particle weights
         reading = readSonar()
         pose.reweight(reading)
@@ -617,6 +584,7 @@ def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
 
 def scanArea():
+    global leftMotor
     global sonarMotor
     readings = []
     target = getMotorAngle(sonarMotor) + 2*pi
