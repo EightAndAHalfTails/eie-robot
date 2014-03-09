@@ -6,6 +6,8 @@ from time import sleep, time
 from math import *
 from random import gauss, uniform
 import sys
+import json
+import os, fnmatch, ast
 from particleDataStructures import *
 
 sonar       = PORT_2
@@ -151,6 +153,10 @@ def initialiseDiffDriveRobot():
     BrickPiSetupSensors()
     BrickPi.Timeout = 5000 # stop motors after 10 seconds
     BrickPiSetTimeout()
+
+def setMotorPower(motor, power):
+    BrickPi.MotorSpeed[motor] = int(power)
+    BrickPiUpdateValues()
 
 def setLeftMotor(power):
     global leftMotor
@@ -612,12 +618,45 @@ def getGaussian(m, sd, z):
 
 def scanArea():
     global sonarMotor
-    while(True):
-	BrickPi.MotorSpeed[sonarMotor] = 70
-        #leftTargetAngle = getMotorAngle(leftMotor)
-        #readSonar()
+    readings = []
+    target = getMotorAngle(sonarMotor) + 2*pi
+    setMotorPower(sonarMotor, 70)
+    while True:
+        readings += readSonar()
+        if getMotorAngle(sonarMotor) > target:
+            break
+    return readings
 
+def compareReadings(readings, target): # lower score is better
+    error = 0.0
+    for (r1, r2) in zip(readings, target):
+        error += (r1-r2)**2
+    return error
 
+def recordHere(filename):
+    reading = scanArea()
+    with open(filename, 'w') as f:
+        json.dump(reading, f)
+
+def loadArea(filename):
+    with open(filename, 'r') as f:
+        reading = json.load(f)
+    return reading
+
+def recordPlace():
+    location = pose.estimatePosition()
+    filename = "{}.json".format(location)
+    recordHere(filename)
+
+def whereAmI():
+    results = []
+    here = scanArea()
+    for f in fnmatch.filter(os.listdir('.'), "*.json"):
+        place = loadArea(f)
+        results += (f, compareReadings(here, place))
+    bestMatch = min(results, key = lambda x: x(1))
+    return ast.literal_eval(bestMatch(0)[:-5])
+    
 def rotateTest():
     lastEncoders = readEncoders()
     while True:
