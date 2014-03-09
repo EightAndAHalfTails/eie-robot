@@ -11,9 +11,9 @@ import os, fnmatch, ast
 from particleDataStructures import *
 
 sonar       = PORT_2
-sonarMotor  = PORT_D
-leftMotor   = PORT_C
-rightMotor  = PORT_B
+sonarMotor  = PORT_A
+leftMotor   = PORT_D
+rightMotor  = PORT_C
 leftBumper  = PORT_1
 rightBumper = PORT_2
 
@@ -147,6 +147,7 @@ def initialiseDiffDriveRobot():
     BrickPiSetup()
     BrickPi.MotorEnable[leftMotor] = 1 # set up Motors
     BrickPi.MotorEnable[rightMotor] = 1
+    BrickPi.MotorEnable[sonarMotor] = 1
     BrickPi.SensorType[leftBumper] = TYPE_SENSOR_TOUCH # set up touch sensors
     BrickPi.SensorType[rightBumper] = TYPE_SENSOR_TOUCH
     BrickPi.SensorType[sonar] = TYPE_SENSOR_ULTRASONIC_CONT # set up sonar
@@ -584,15 +585,18 @@ def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
 
 def scanArea():
-    global leftMotor
     global sonarMotor
     readings = []
     target = getMotorAngle(sonarMotor) + 2*pi
-    setMotorPower(sonarMotor, 70)
+    setMotorPower(sonarMotor, 50)
     while True:
-        readings += readSonar()
+        readings.append(readSonar())
         if getMotorAngle(sonarMotor) > target:
+            setMotorPower(sonarMotor, 0)
             break
+        print readSonar()
+    
+    print readings
     return readings
 
 def compareReadings(readings, target): # lower score is better
