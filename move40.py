@@ -1,4 +1,4 @@
 from BrickPi import *
 from robot import *
 initialiseDiffDriveRobot()
-goDistance(30)
+goDistance(100)
