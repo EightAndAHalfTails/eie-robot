@@ -290,6 +290,8 @@ def goDistance(targetDistance, desiredSpeed=40):
             prop = 1.0
             leftSpeed += prop*(dr-dl)
             rightSpeed += prop*(dl-dr)
+            lastLeft = getMotorAngle(leftMotor)
+            lastRight = getMotorAngle(rightMotor)
 
             distanceMoved = (distanceMovedLeft + distanceMovedRight) / 2
             distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)
@@ -371,14 +373,24 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     
     leftStartAngle = getMotorAngle(leftMotor)
     rightStartAngle = getMotorAngle(rightMotor)
+
+    lastLeft = leftStartAngle
+    lastRight = rightStartAngle
+
     # main control loop
     while(not arrived):
         BrickPi.MotorSpeed[leftMotor] = leftMotorPower
         BrickPi.MotorSpeed[rightMotor] = rightMotorPower
         BrickPiUpdateValues()
-        
-#        leftWheelVelocity = getVelocity(leftMotor)
-#        rightWheelVelocity = getVelocity(rightMotor)
+
+        # adjust motor speeds
+        dl = getMotorAngle(leftMotor) - lastLeft
+        dr = getMotorAngle(rightMotor) - lastRight
+        prop = 1.0
+        leftSpeed += prop*(dr+dl)
+        rightSpeed += prop*(-dr-dl)
+        lastLeft = getMotorAngle(leftMotor)
+        lastRight = getMotorAngle(rightMotor)
 
         leftAngleError = getMotorAngle(leftMotor) - leftTargetAngle
         rightAngleError = getMotorAngle(rightMotor) - rightTargetAngle
@@ -387,14 +399,11 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
             arrived = leftAngleError > rightAngleError
         else:
             arrived = leftAngleError < rightAngleError
-        
-#        print "Distance Remaining=", leftAngleError*wheelRadius, rightAngleError*wheelRadius
 
         distanceMovedLeft = (getMotorAngle(leftMotor) - leftStartAngle) * wheelRadius
         distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
 
         angleTurned = (distanceMovedLeft - distanceMovedRight) / wheelSeparation
-#        print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
 
     stop()
     
