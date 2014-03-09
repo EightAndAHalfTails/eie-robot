@@ -270,18 +270,32 @@ def goDistance(targetDistance, desiredSpeed=40):
     initialSpeed = 150 * (1 if forwards else -1)
     oldD = 0
 
+    leftSpeed = initialSpeed
+    rightSpeed = initialSpeed
+
+    lastLeft = getMotorAngle(leftMotor)
+    lastRight = getMotorAngle(rightMotor)
+
     # Main control loop
     if forwards:
         while(abs(distanceMovedLeft) < abs(targetDistance) or abs(distanceMovedRight) < abs(targetDistance)):
-#            accelerateToSpeed(desiredSpeed)
-            setLeftMotor(initialSpeed)
-            setRightMotor(initialSpeed)
-            distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)
-            distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)
+
+            setLeftMotor(leftSpeed)
+            setRightMotor(rightSpeed)
+            
+            # adjust motor speeds
+            dl = getMotorAngle(leftMotor) - lastLeft
+            dr = getMotorAngle(rightMotor) - lastRight
+            prop = 1.0
+            leftSpeed += prop*(dr-dl)
+            rightSpeed += prop*(dl-dr)
 
             distanceMoved = (distanceMovedLeft + distanceMovedRight) / 2
+            distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)
+            distanceMovedLeft = wheelRadius*(getMotorAngle(leftMotor) - startAngleLeft)
             dx = distanceMoved - oldD
             oldD = distanceMoved
+
             # update particle weights
             pose.moveForward(dx)
 
