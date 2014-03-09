@@ -275,10 +275,15 @@ def goDistance(targetDistance, desiredSpeed=40):
             distanceMoved = (distanceMovedLeft + distanceMovedRight) / 2
             dx = distanceMoved - oldD
             oldD = distanceMoved
-            pose.moveForward(dx)
+            # update particle weights
+            reading = readSonar()
+            pose.reweight(reading)
 
-#            print dx
+            # resample particle set
+            pose.normalise()
+            pose.resample()
             printParticles(pose)
+
     stop()
 #    print "Distance Moved =", distanceMovedLeft, distanceMovedRight
 
@@ -372,8 +377,16 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     distanceMovedLeft = (getMotorAngle(leftMotor) - leftStartAngle) * wheelRadius
     distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
 
-    angleTurned = (distanceMovedLeft - distanceMovedRight) / wheelSeparation
-#    print "Left: {}, Right: {}\t Rotated {} degrees".format(distanceMovedLeft, distanceMovedRight, degrees(angleTurned))
+    angleTurned = (distanceMovedRight - distanceMovedLeft) / wheelSeparation
+    pos.rotate(angleTurned)
+    # update particle weights
+    reading = readSonar()
+    pose.reweight(reading)
+
+    # resample particle set
+    pose.normalise()
+    pose.resample()
+    printParticles(pose)
 
 def navigateToWaypoint(x, y):
     (curX, curY, curA) = pose.estimatePosition()
@@ -448,7 +461,7 @@ def crashTest():
 def navigateWaypoints(waypointList):
     lastEncoders = readEncoders()
     waypoints = waypointList
-    while(True):
+    while(waypoints):
         # figure out where to go
         (tarX, tarY) = waypoints[0]
         (curX, curY, curA) = pose.estimatePosition()
@@ -459,21 +472,25 @@ def navigateWaypoints(waypointList):
 
         distance = hypot(dx, dy)
         da = (degrees(bearing) - curA)%360
-        
+
+        ###Replacing with single rotate and advance###
+        rotateClockwise = da<180
+        rotateAngle = da if rotateClockwise else 360-da
+        rotate(rotateAngle, rotateClockwise)
+
+        goDistance(distance)
+"""        
         # work out action to be taken
         minAngle = 10#degrees
         minDistance = 5#cm
         mustRotate = minAngle < da < 360-minAngle 
         mustAdvance = distance > minDistance
-#        print "Must rotate {} and advance {}.".format(da, distance)
-#        print "Will " + ("rotate" if mustRotate else "advance")
         # work out change from last step
         currEncoders = readEncoders()
         encoderChange = ( currEncoders[0] - lastEncoders[0],
                           currEncoders[1] - lastEncoders[1] )
         encoderDistance = map(encoderToDistance, encoderChange)
         lastEncoders = currEncoders
-#        print "\tCurrent Encoders = {}\n\tLast Encoders = {}\n\tEncoder distance change = {}".format(currEncoders, lastEncoders, encoderDistance)
 
         # update motors and particle model
         if mustRotate:
@@ -487,7 +504,6 @@ def navigateWaypoints(waypointList):
         
             (l, r) = encoderDistance
             angleRotated = degrees((r - l) / wheelSeparation)
-#            print "Rotated {} degrees".format(angleRotated)
             pose.rotate(angleRotated)
 
         if not mustRotate and mustAdvance:
@@ -501,7 +517,7 @@ def navigateWaypoints(waypointList):
             stop()
             sleep(1)
             waypoints = waypoints[1:] # remove first waypoint
-
+"""
         # update particle weights
         reading = readSonar()
         pose.reweight(reading)
@@ -510,8 +526,11 @@ def navigateWaypoints(waypointList):
         pose.normalise()
         pose.resample()
         printParticles(pose)
-        print pose.estimatePosition()
-        print "distance to waypoint:", (dx, dy, da)
+
+        print "Waypoint {} reached!".format(waypoints[0])
+        stop()
+        sleep(1)
+        waypoints = waypoints[1:] # remove first waypoint
             
 def setMotors(left, right):
     setLeftMotor(left)
