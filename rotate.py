@@ -2,4 +2,4 @@ from BrickPi import *
 from robot import initialiseDiffDriveRobot, rotate
 
 initialiseDiffDriveRobot()
-rotate(90)
+rotate(360)

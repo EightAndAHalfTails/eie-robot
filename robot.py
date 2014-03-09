@@ -34,7 +34,7 @@ class orientation:
     def moveForward(self, d):
         sd = d/40.0
         meanOvershoot = d/15.0
-        meanR = d*13.0/100.0
+        meanR = 0
         e = gauss(meanOvershoot, sd)
         f = gauss(meanR, sd)
 
@@ -44,8 +44,8 @@ class orientation:
         self.a = self.a
 
     def rotate(self, b):
-        mu = -b/64.0
-        sd = b/10.0
+        mu = 0
+        sd = b*5/360
         g = gauss(mu, sd)
 
         self.a += b + g
