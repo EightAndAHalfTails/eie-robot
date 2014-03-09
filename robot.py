@@ -386,7 +386,6 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     distanceMovedRight = (getMotorAngle(rightMotor) - rightStartAngle) * wheelRadius
 
     angleTurned = (distanceMovedRight - distanceMovedLeft) / wheelSeparation
-    pose.rotate(angleTurned)
     # update particle weights
     reading = readSonar()
     pose.reweight(reading)
@@ -484,9 +483,9 @@ def navigateWaypoints(waypointList):
         da = (degrees(bearing) - curA)%360
 
         ###Replacing with single rotate and advance###
-        rotateClockwise = da<180
+        rotateClockwise = da>180
         print "Rotating {}".format(da)
-        rotateAngle = da if rotateClockwise else 360-da
+        rotateAngle = 360-da if rotateClockwise else da
         rotate(rotateAngle, rotateClockwise)
 
         goDistance(distance)
