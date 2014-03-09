@@ -592,13 +592,30 @@ def getGaussian(m, sd, z):
 	return math.e**((-((z-m)*(z-m)))/2*sd*sd)
 
 def scanArea():
+    global leftMotor
     global sonarMotor
-    while(True):
-	BrickPi.MotorSpeed[sonarMotor] = 70
-        #leftTargetAngle = getMotorAngle(leftMotor)
-        #readSonar()
+    lastCheck = False
+    thisCheck = False
+    targetAngle = getMotorAngle(sonarMotor) + radians(360)
+    startAngle = getMotorAngle(sonarMotor)
+    arrived = False
+    
+    while(not arrived):
+        BrickPi.MotorSpeed[sonarMotor] = int(200)
+        BrickPiUpdateValues()
 
+        angleError = getMotorAngle(sonarMotor) - targetAngle
+        #arrived = (True if angleError == 0.0 else False)
+        
+        #thisCheck = angleError%1.0 <= 0.1
+        #if (lastCheck == False and thisCheck == True):
+        #    readSonar()
+        #    lastCheck == thisCheck
+        
+        #print BrickPi.MotorSpeed[sonarMotor]
+        #print angleError%1.0 <= 0.1
 
+     
 def rotateTest():
     lastEncoders = readEncoders()
     while True:
