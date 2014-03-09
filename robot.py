@@ -33,8 +33,9 @@ class orientation:
 
     def moveForward(self, d):
         sd = d/40.0
-        meanR = d/15.0
-        e = gauss(0, sd)
+        meanOvershoot = d/15.0
+        meanR = d*13.0/100.0
+        e = gauss(meanOvershoot, sd)
         f = gauss(meanR, sd)
 
         self.x += (d + e)*cos(radians(self.a))
@@ -305,7 +306,7 @@ def goDistance(targetDistance, desiredSpeed=40):
             # resample particle set
             pose.normalise()
             pose.resample()
-            #printParticles(pose)
+            printParticles(pose)
 
     stop()
 #    print "Distance Moved =", distanceMovedLeft, distanceMovedRight
@@ -341,7 +342,7 @@ def accelerateToSpeed(desiredSpeed):
         sleep(0.1)
 
 def rotate(angle, clockwise=True): # angle to rotate in degrees
-    pose.rotate(angle if clockwise else -angle)
+    pose.rotate(-angle if clockwise else angle)
 
     # Initialise target values
     global leftMotor
@@ -408,7 +409,7 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
     # resample particle set
     pose.normalise()
     pose.resample()
-    #printParticles(pose)
+    printParticles(pose)
 
 def navigateToWaypoint(x, y):
     (curX, curY, curA) = pose.estimatePosition()
@@ -488,7 +489,7 @@ def navigateWaypoints(waypointList):
         
         (tarX, tarY) = waypoints[0]
         (curX, curY, curA) = pose.estimatePosition()
-        print "Cur{} {} Tar {} {}".format(curX, curY, tarX, tarY)
+        print "Cur{} {} {} Tar {} {}".format(curX, curY, curA, tarX, tarY)
         dx = tarX - curX
         dy = tarY - curY
         bearing = atan2(dy, dx)
