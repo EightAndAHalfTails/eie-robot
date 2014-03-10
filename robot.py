@@ -18,7 +18,7 @@ leftBumper  = PORT_1
 rightBumper = PORT_2
 
 wheelRadius = 1.8#cm
-wheelSeparation = 20.0#cm
+wheelSeparation = 19.6#cm
 
 SCALE = 2.0
 startX = 100#cm
@@ -45,7 +45,7 @@ class orientation:
 
     def rotate(self, b):
         mu = 0
-        sd = b*5/360
+        sd = b/360
         g = gauss(mu, sd)
 
         self.a += b + g
@@ -290,8 +290,8 @@ def goDistance(targetDistance, desiredSpeed=40):
             prop = 1.0
             leftSpeed += prop*(dr-dl)
             rightSpeed += prop*(dl-dr)
-            lastLeft = getMotorAngle(leftMotor)
-            lastRight = getMotorAngle(rightMotor)
+            #lastLeft = getMotorAngle(leftMotor)
+            #lastRight = getMotorAngle(rightMotor)
 
             distanceMoved = (distanceMovedLeft + distanceMovedRight) / 2
             distanceMovedRight = wheelRadius*(getMotorAngle(rightMotor) - startAngleRight)
@@ -379,16 +379,15 @@ def rotate(angle, clockwise=True): # angle to rotate in degrees
 
     # main control loop
     while(not arrived):
-        BrickPi.MotorSpeed[leftMotor] = leftMotorPower
-        BrickPi.MotorSpeed[rightMotor] = rightMotorPower
-        BrickPiUpdateValues()
+        setMotorPower(leftMotor, leftMotorPower)
+        setMotorPower(rightMotor, rightMotorPower)
 
         # adjust motor speeds
         dl = getMotorAngle(leftMotor) - lastLeft
         dr = getMotorAngle(rightMotor) - lastRight
         prop = 1.0
-        leftSpeed += prop*(dr+dl)
-        rightSpeed += prop*(-dr-dl)
+        leftMotorPower += prop*(dr+dl)
+        rightMotorPower += prop*(-dr-dl)
         lastLeft = getMotorAngle(leftMotor)
         lastRight = getMotorAngle(rightMotor)
 
