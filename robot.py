@@ -8,6 +8,7 @@ from random import gauss, uniform
 import sys
 import json
 import os, fnmatch, ast
+from collections import deque
 from particleDataStructures import *
 
 sonar       = PORT_2
@@ -24,6 +25,8 @@ SCALE = 2.0
 startX = 100#cm
 startY = 100#cm
 startA = 0#degrees
+
+resolution = 72
 
 class orientation:
     def __init__(self):
@@ -608,17 +611,20 @@ def getGaussian(m, sd, z):
 
 def scanArea():
     global sonarMotor
+    global resolution
+    sonarGearRatio = 3
     readings = []
-    target = getMotorAngle(sonarMotor) + 2*pi
+    startAngle = getMotorAngle(sonarMotor)
+    target = startAngle + 2*pi*sonarGearRatio
     setMotorPower(sonarMotor, 50)
     while True:
-        readings.append(readSonar())
+        angle = getMotorAngle(sonarMotor)
+        for r in range(resolution):
+            if len(readings) < r and angle > r*pi/resolution: 
+                readings.append(readSonar())
         if getMotorAngle(sonarMotor) > target:
             setMotorPower(sonarMotor, 0)
             break
-        print readSonar()
-    
-    print readings
     return readings
 
 def compareReadings(readings, target): # lower score is better
@@ -643,13 +649,17 @@ def recordPlace():
     recordHere(filename)
 
 def whereAmI():
+    global resolution
     results = []
     here = scanArea()
     for f in fnmatch.filter(os.listdir('.'), "*.json"):
-        place = loadArea(f)
-        results += (f, compareReadings(here, place))
-    bestMatch = min(results, key = lambda x: x(1))
-    return ast.literal_eval(bestMatch(0)[:-5])
+        place = deque(loadArea(f))
+        for offset in range(resolution):
+            angleOffset = 2*pi*offset/resolution
+            place.rotate(-offset)
+            results += (f, angleOffset, compareReadings(here, place))
+    bestMatch = min(results, key = lambda x: x[-1])
+    return ast.literal_eval(bestMatch(0)[:-5]) + (offset,) # returns guessed (x, y, a)
     
 def rotateTest():
     lastEncoders = readEncoders()
